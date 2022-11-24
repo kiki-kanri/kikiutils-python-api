@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 
 setup(
-    name='kikiutils_api',
+    name='kiki_utils_api',
     classifiers=[
         'License :: Freely Distributable'
     ],
