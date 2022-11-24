@@ -37,7 +37,7 @@ class DataTransmission:
             data['uuid'] = get_uuid()
 
         files = kwargs.pop('files', {})
-        files['hash_file'] = self.hash_data(data)
+        files['hash_file'] = s2b(self.hash_data(data))
 
         async with self.session.request(
             method=method,
@@ -65,7 +65,7 @@ class DataTransmission:
         shuffle(data_list)
         aes = AesCrypt(self.key, self.iv)
         hash_data = aes.encrypt(data_list)
-        return s2b(hash_data)
+        return hash_data
 
     def process_hash_data(self, hash_text: str) -> dict:
         aes = AesCrypt(self.key, self.iv)
