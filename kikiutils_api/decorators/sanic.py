@@ -58,6 +58,8 @@ def validate(
             result = await validate_and_exec(
                 rules,
                 request_data,
+                parse_json,
+                use_dict,
                 view_func,
                 (rq, *args),
                 kwargs
