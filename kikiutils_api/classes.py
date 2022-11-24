@@ -9,8 +9,6 @@ from kikiutils.uuid import get_uuid
 from random import randint, shuffle
 from typing import Union
 
-from .utils import response_is_text
-
 
 class DataTransmission:
     def __init__(
@@ -47,7 +45,7 @@ class DataTransmission:
             files=files,
             **kwargs
         ) as response:
-            if response_is_text(response):
+            if self.response_is_text(response):
                 return self.process_hash_data(await response.text())
 
             return await response.content.read()
@@ -79,6 +77,13 @@ class DataTransmission:
             }
         except:
             pass
+
+    @staticmethod
+    def response_is_text(response: aiohttp.ClientResponse):
+        for k, v in response.headers.items():
+            if k.lower() == 'content-type':
+                return 'text/' in v.lower()
+        return False
 
 
 class DataTransmissionSecret:

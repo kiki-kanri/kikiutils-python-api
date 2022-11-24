@@ -1,4 +1,3 @@
-from aiohttp import ClientResponse
 from json import loads
 from kikiutils.check import isdict
 from validator import validate as _package_validate
@@ -17,7 +16,9 @@ async def data_transmission_exec(
     kwargs: dict
 ):
     for secret_class in secret_classes:
-        data: dict = secret_class.data_transmission.process_hash_data(hash_data)
+        data: dict = secret_class.data_transmission.process_hash_data(
+            hash_data
+        )
 
         if data is not None:
             break
@@ -42,13 +43,6 @@ async def data_transmission_exec(
         return result
 
     return secret_class.data_transmission.hash_data(response_data)
-
-
-def response_is_text(response: ClientResponse):
-    for k, v in response.headers.items():
-        if k.lower() == 'content-type':
-            return 'text/' in v.lower()
-    return False
 
 
 def parse_dict_value_json(data: dict):
