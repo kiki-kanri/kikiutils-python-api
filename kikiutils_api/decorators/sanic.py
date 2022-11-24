@@ -21,9 +21,11 @@ def data_transmission_api(
     def decorator(view_func):
         @wraps(view_func)
         async def wrapped_view(rq: Request, *args, **kwargs):
-            request_data = get_request_data(rq)
+            if (hash_file := rq.files.get('hash_file')) is None:
+                return _error_404
+
             result = await data_transmission_exec(
-                request_data,
+                hash_file.body,
                 secret_classes,
                 _error_404,
                 parse_json,

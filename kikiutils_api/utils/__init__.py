@@ -7,7 +7,7 @@ from ..classes import DataTransmissionSecret
 
 
 async def data_transmission_exec(
-    request_data: dict[str, str],
+    hash_data: str,
     secret_classes: tuple[DataTransmissionSecret],
     error_404,
     parse_json: bool,
@@ -16,13 +16,8 @@ async def data_transmission_exec(
     args: tuple,
     kwargs: dict
 ):
-    if len(request_data) != 1:
-        return error_404
-
-    value = request_data.popitem()[1]
-
     for secret_class in secret_classes:
-        data: dict = secret_class.data_transmission.process_hash_data(value)
+        data: dict = secret_class.data_transmission.process_hash_data(hash_data)
 
         if data is not None:
             break
