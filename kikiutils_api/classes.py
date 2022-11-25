@@ -37,12 +37,16 @@ class DataTransmission:
             data['uuid'] = get_uuid()
 
         files = kwargs.pop('files', {})
-        files['hash_file'] = s2b(self.hash_data(data))
+        formdata = aiohttp.FormData()
+        formdata.add_field('hash_file', s2b(self.hash_data(data)))
+
+        for k, v in files.items():
+            formdata.add_field(k, v)
 
         async with self.session.request(
             method=method,
             url=url,
-            files=files,
+            data=formdata,
             **kwargs
         ) as response:
             if self.response_is_text(response):
