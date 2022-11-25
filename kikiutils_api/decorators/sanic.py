@@ -65,7 +65,7 @@ def validate(
                 kwargs
             )
 
-            if result == False:
+            if result is None:
                 return _error_422
             return result
         return wrapped_view
