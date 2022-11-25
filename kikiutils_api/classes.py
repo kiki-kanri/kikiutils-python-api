@@ -20,7 +20,6 @@ class DataTransmission:
         self.api_base_url = api_base_url
         self.iv = iv
         self.key = key
-        self.session = aiohttp.ClientSession()
 
     async def request(
         self,
@@ -43,7 +42,7 @@ class DataTransmission:
         for k, v in files.items():
             formdata.add_field(k, v)
 
-        async with self.session.request(
+        async with aiohttp.request(
             method=method,
             url=url,
             data=formdata,
