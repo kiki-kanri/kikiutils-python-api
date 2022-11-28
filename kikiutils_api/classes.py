@@ -4,6 +4,7 @@ import re
 
 from kikiutils.aes import AesCrypt
 from kikiutils.check import isdict
+from kikiutils.log import logger
 from kikiutils.string import random_str, s2b
 from kikiutils.uuid import get_uuid
 from random import randint, shuffle
@@ -101,6 +102,7 @@ class DataTransmissionSecret:
         method: str = 'post',
         data_add_uuid: bool = False,
         wait_success: bool = True,
+        log_error: bool = False,
         **kwargs
     ):
         while True:
@@ -112,7 +114,10 @@ class DataTransmissionSecret:
                     data_add_uuid,
                     **kwargs
                 )
-            except:
+            except Exception as error:
+                if log_error:
+                    logger.error(f'Request failed：{str(error)}')
+
                 if wait_success:
                     continue
 
