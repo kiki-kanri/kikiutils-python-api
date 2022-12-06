@@ -6,7 +6,7 @@ from ..classes import DataTransmissionSecret
 
 
 async def data_transmission_exec(
-    hash_data: str,
+    hash_data: bytes | str,
     secret_classes: tuple[DataTransmissionSecret],
     error_404,
     parse_json: bool,
