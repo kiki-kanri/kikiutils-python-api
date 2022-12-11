@@ -2,7 +2,7 @@ from functools import wraps
 from kikiutils.check import isstr
 from sanic import Request, text
 
-from ..classes import DataTransmissionSecret
+from ..classes.transmission import DataTransmissionSecret
 from ..utils import data_transmission_exec, validate_and_exec
 from ..utils.sanic import get_request_data
 

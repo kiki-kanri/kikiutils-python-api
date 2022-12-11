@@ -1,12 +1,13 @@
 from json import loads
 from kikiutils.check import isdict
+from typing import Union
 from validator import validate as _package_validate
 
-from ..classes import DataTransmissionSecret
+from ..classes.transmission import DataTransmissionSecret
 
 
 async def data_transmission_exec(
-    hash_data: bytes | str,
+    hash_data: Union[bytes, str],
     secret_classes: tuple[DataTransmissionSecret],
     error_404,
     parse_json: bool,
