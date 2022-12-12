@@ -19,78 +19,74 @@ class ServiceWebsocketConnection:
     async def send_text(self, text: str):
         await self.ws.send_text(text)
 
-    async def recv_data(self):
+    async def recv_data(self) -> list:
         return self.aes.decrypt(await self.ws.receive_text())
 
 
 class ServiceWebsockets:
-    def __init__(self, aes: AesCrypt):
+    def __init__(self, aes: AesCrypt, service_name: str):
         self.aes = aes
-        self.event_handlers: dict[
-            str,
-            Callable[..., Coroutine]
-        ] = {}
-
-        self.websockets: dict[
+        self.connections: dict[
             str,
             dict[str, ServiceWebsocketConnection]
         ] = {}
 
-    async def _listen(self, ws_connection: ServiceWebsocketConnection):
+        self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
+        self.service_name = service_name
+
+    def _add_connection(
+        self,
+        group_name: str,
+        connection: ServiceWebsocketConnection
+    ):
+        if group_name in self.connections:
+            self.connections[group_name][connection.code] = connection
+        else:
+            self.connections[group_name] = {connection.code: connection}
+
+    def _del_connection(
+        self,
+        group_name: str,
+        connection: ServiceWebsocketConnection
+    ):
+        if group_name in self.connections:
+            self.connections[group_name].pop(connection.code, None)
+
+            if not self.connections[group_name]:
+                self.connections.pop(group_name, None)
+
+    async def _listen(self, connection: ServiceWebsocketConnection):
         while True:
-            event, args, kwargs = await ws_connection.recv_data()
+            event, args, kwargs = await connection.recv_data()
 
             if event in self.event_handlers:
                 create_task(
                     self.event_handlers[event](
-                        ws_connection,
+                        connection,
                         *args,
                         **kwargs
                     )
                 )
 
-    # Connection
-
-    async def accept_and_listen(self, service: str, websocket: WebSocket):
+    async def accept_and_listen(self, group_name: str, websocket: WebSocket):
         await websocket.accept()
+        connection = ServiceWebsocketConnection(self.aes, websocket)
         data = None
-        ws_connection = ServiceWebsocketConnection(self.aes, websocket)
 
         try:
-            data = await ws_connection.recv_data()
+            data = await connection.recv_data()
 
             if data[0] != 'init' or 'code' not in data[2]:
                 raise ValueError('')
 
-            ws_connection.code = data[2]['code']
-            self.add_websocket(service, ws_connection)
-            await self._listen(ws_connection)
+            connection.code = data[2]['code']
+            self._add_connection(group_name, connection)
+            await self._listen(connection)
         except:
             pass
 
-        if data and ws_connection.code:
-            self.del_websocket(service, ws_connection.code)
-
-    def add_websocket(
-        self,
-        service: str,
-        websocket: ServiceWebsocketConnection
-    ):
-        """Add connection to connections pool."""
-
-        if service not in self.websockets:
-            self.websockets[service] = {websocket.code: websocket}
-        else:
-            self.websockets[service][websocket.code] = websocket
-
-    def del_websocket(self, service: str, websocket_code: str):
-        if self.websockets.get(service):
-            self.websockets[service].pop(websocket_code, None)
-
-            if not self.websockets[service]:
-                self.websockets.pop(service, None)
-
-    # Event register and listen
+        if connection.code:
+            self._del_connection(connection)
 
     def on(self, event: str):
         """Register event handler."""
@@ -103,11 +99,22 @@ class ServiceWebsockets:
             return wrapped_view
         return decorator
 
-    # Send
+    async def send_to_all(self, event: str, *args, **kwargs):
+        text = self.aes.encrypt([event, args, kwargs])
 
-    def send_to_service(self, service: str, event: str, *args, **kwargs):
-        if service in self.websockets:
+        for group in self.connections.values():
+            for c in group.values():
+                await c.send_text(text)
+
+    async def send_to_group(
+        self,
+        group_name: str,
+        event: str,
+        *args,
+        **kwargs
+    ):
+        if group_name in self.connections:
             text = self.aes.encrypt([event, args, kwargs])
 
-            for connection in self.websockets[service].values():
-                create_task(connection.send_text(text))
+            for c in self.connections[group_name].values():
+                await c.send_text(text)
