@@ -52,6 +52,5 @@ def service_websocket(aes: AesCrypt):
                     except:
                         pass
 
-            return not_found()
         return wrapped_view
     return decorator
