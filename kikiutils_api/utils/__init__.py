@@ -14,7 +14,8 @@ async def data_transmission_exec(
     kwarg_name: str,
     view_func,
     args: tuple,
-    kwargs: dict
+    kwargs: dict,
+    is_blacksheep: bool = False
 ):
     for secret_class in secret_classes:
         data: dict = secret_class.data_transmission.process_hash_data(
@@ -29,8 +30,11 @@ async def data_transmission_exec(
     if parse_json:
         parse_dict_value_json(data)
 
-    kwargs[kwarg_name] = data
-    result = await view_func(*args, **kwargs)
+    if is_blacksheep:
+        result = await view_func(*args[:-1], data, **kwargs)
+    else:
+        kwargs[kwarg_name] = data
+        result = await view_func(*args, **kwargs)
 
     response_data = {
         'success': True
