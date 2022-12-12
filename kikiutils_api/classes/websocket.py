@@ -1,4 +1,4 @@
-from asyncio import get_event_loop, sleep, Task
+from asyncio import AbstractEventLoop, get_event_loop, sleep, Task
 from functools import wraps
 from kikiutils.aes import AesCrypt
 from kikiutils.string import random_str
@@ -9,6 +9,7 @@ from websockets.legacy.client import Connect
 class WebsocketClient:
     _listen_task: Task
     code: str
+    loop: AbstractEventLoop = None
 
     def __init__(
         self,
@@ -18,7 +19,6 @@ class WebsocketClient:
         check_interval: int = 3,
         headers: dict = {}
     ):
-        self._create_task = get_event_loop().create_task
         self.aes = aes
         self.check_interval = check_interval
         self.code = random_str()
@@ -46,12 +46,18 @@ class WebsocketClient:
             self._listen_task.cancel()
 
             while True:
+                await sleep(1)
+
                 try:
-                    await sleep(1)
                     await self.connect()
                     break
                 except:
                     pass
+
+    def _create_task(self, coro: Coroutine):
+        if self.loop is None:
+            self.loop = get_event_loop()
+        return self.loop.create_task(coro)
 
     async def _listen(self):
         while True:
