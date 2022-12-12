@@ -45,12 +45,11 @@ def service_websocket(aes: AesCrypt):
             if ws := get_ws(args):
                 if extra_info := ws.headers.get(b'extra-info'):
                     try:
-                        return await view_func(
-                            *args[:-1],
-                            aes.decrypt(extra_info[0])
-                        )
+                        data = aes.decrypt(extra_info[0])
                     except:
-                        pass
+                        return
+
+                    return await view_func(*args[:-1], data)
 
         return wrapped_view
     return decorator
