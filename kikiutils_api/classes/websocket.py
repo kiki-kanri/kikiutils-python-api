@@ -14,22 +14,32 @@ class WebsocketClient:
         self,
         aes: AesCrypt,
         name: str,
-        url: str
+        url: str,
+        check_interval: int = 3,
+        headers: dict = {}
     ):
+        self._create_task = get_event_loop().create_task
         self.aes = aes
+        self.check_interval = check_interval
         self.code = random_str()
+        self.connect_kwargs = {
+            'extra_headers': {
+                'extra-info': aes.encrypt(headers)
+            },
+            'ping_interval': None,
+            'uri': url
+        }
+
         self.event_handlers: dict[
             str,
             Callable[..., Coroutine]
         ] = {}
 
-        self._create_task = get_event_loop().create_task
         self.name = name
-        self.url = url
 
     async def _check(self):
         try:
-            await sleep(1)
+            await sleep(self.check_interval)
             await self.ws.ping()
             self._create_task(self._check())
         except:
@@ -48,12 +58,10 @@ class WebsocketClient:
             event, args, kwargs = self.aes.decrypt(await self.ws.recv())
 
             if event in self.event_handlers:
-                self._create_task(
-                    self.event_handlers[event](*args, **kwargs)
-                )
+                self._create_task(self.event_handlers[event](*args, **kwargs))
 
     async def connect(self):
-        self.ws = await Connect(self.url, ping_interval=None)
+        self.ws = await Connect(**self.connect_kwargs)
         await self.send('init', code=self.code)
         self._create_task(self._check())
         self._listen_task = self._create_task(self._listen())
@@ -70,10 +78,4 @@ class WebsocketClient:
         return decorator
 
     async def send(self, event: str, *args, **kwargs):
-        await self.ws.send(
-            self.aes.encrypt([
-                event,
-                args,
-                kwargs
-            ], True)
-        )
+        await self.ws.send(self.aes.encrypt([event, args, kwargs]))

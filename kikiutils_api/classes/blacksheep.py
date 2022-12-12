@@ -14,16 +14,13 @@ class ServiceWebsocketConnection:
         self.ws = websocket
 
     async def send(self, event: str, *args, **kwargs):
-        await self.ws.send_bytes(
-            self.aes.encrypt([
-                event,
-                args,
-                kwargs
-            ], True)
-        )
+        await self.send_text(self.aes.encrypt([event, args, kwargs]))
+
+    async def send_text(self, text: str):
+        await self.ws.send_text(text)
 
     async def recv_data(self):
-        return self.aes.decrypt(await self.ws.receive_bytes())
+        return self.aes.decrypt(await self.ws.receive_text())
 
 
 class ServiceWebsockets:
@@ -54,7 +51,7 @@ class ServiceWebsockets:
 
     # Connection
 
-    async def accept_and_listen(self, code: str, websocket: WebSocket):
+    async def accept_and_listen(self, service: str, websocket: WebSocket):
         await websocket.accept()
         data = None
         ws_connection = ServiceWebsocketConnection(self.aes, websocket)
@@ -66,32 +63,32 @@ class ServiceWebsockets:
                 raise ValueError('')
 
             ws_connection.code = data[2]['code']
-            self.add_websocket(code, ws_connection)
+            self.add_websocket(service, ws_connection)
             await self._listen(ws_connection)
         except:
             pass
 
         if data and ws_connection.code:
-            self.del_websocket(code, ws_connection.code)
+            self.del_websocket(service, ws_connection.code)
 
     def add_websocket(
         self,
-        code: str,
+        service: str,
         websocket: ServiceWebsocketConnection
     ):
         """Add connection to connections pool."""
 
-        if code not in self.websockets:
-            self.websockets[code] = {websocket.code: websocket}
+        if service not in self.websockets:
+            self.websockets[service] = {websocket.code: websocket}
         else:
-            self.websockets[code][websocket.code] = websocket
+            self.websockets[service][websocket.code] = websocket
 
-    def del_websocket(self, code: str, websocket_code: str):
-        if self.websockets.get(code):
-            self.websockets[code].pop(websocket_code, None)
+    def del_websocket(self, service: str, websocket_code: str):
+        if self.websockets.get(service):
+            self.websockets[service].pop(websocket_code, None)
 
-            if not self.websockets[code]:
-                self.websockets.pop(code, None)
+            if not self.websockets[service]:
+                self.websockets.pop(service, None)
 
     # Event register and listen
 
@@ -105,3 +102,12 @@ class ServiceWebsockets:
             self.event_handlers[event] = wrapped_view
             return wrapped_view
         return decorator
+
+    # Send
+
+    def send_to_service(self, service: str, event: str, *args, **kwargs):
+        if service in self.websockets:
+            text = self.aes.encrypt([event, args, kwargs])
+
+            for connection in self.websockets[service].values():
+                create_task(connection.send_text(text))
