@@ -14,13 +14,11 @@ from typing import Union
 class DataTransmission:
     def __init__(
         self,
-        key: Union[bytes, str],
-        iv: Union[bytes, str],
+        aes: AesCrypt,
         api_base_url: str = ''
     ):
+        self.aes = aes
         self.api_base_url = api_base_url
-        self.iv = iv
-        self.key = key
 
     async def request(
         self,
@@ -61,23 +59,16 @@ class DataTransmission:
                 randint(33, 256)
             )
 
-        data_list = []
-
-        for key, value in data.items():
-            data_list.append([key, value])
-
+        data_list = list(data.items())
         shuffle(data_list)
-        aes = AesCrypt(self.key, self.iv)
-        hash_data = aes.encrypt(data_list)
+        hash_data = self.aes.encrypt(data_list)
         return hash_data
 
     def process_hash_data(self, hash_text: str) -> dict:
-        aes = AesCrypt(self.key, self.iv)
-
         try:
             return {
                 i[0]: i[1]
-                for i in aes.decrypt(hash_text)
+                for i in self.aes.decrypt(hash_text)
             }
         except:
             pass
@@ -91,7 +82,6 @@ class DataTransmission:
 
 
 class DataTransmissionSecret:
-    aes: AesCrypt
     data_transmission: DataTransmission
 
     @classmethod
