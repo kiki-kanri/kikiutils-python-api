@@ -64,7 +64,7 @@ class DataTransmission:
         hash_data = self.aes.encrypt(data_list)
         return hash_data
 
-    def process_hash_data(self, hash_text: str) -> dict:
+    def process_hash_data(self, hash_text: str) -> dict | None:
         try:
             return {
                 i[0]: i[1]

@@ -7,20 +7,20 @@ from kikiutils.aes import AesCrypt
 
 
 class ServiceWebsocketConnection:
-    code = None
+    code: str = ''
 
     def __init__(self, aes: AesCrypt, websocket: WebSocket):
         self.aes = aes
         self.ws = websocket
 
     async def send(self, event: str, *args, **kwargs):
-        await self.send_text(self.aes.encrypt([event, args, kwargs]))
+        await self.send_text(self.aes.encrypt([event, args, kwargs])) # type: ignore
 
     async def send_text(self, text: str):
         await self.ws.send_text(text)
 
     async def recv_data(self) -> list:
-        return self.aes.decrypt(await self.ws.receive_text())
+        return self.aes.decrypt(await self.ws.receive_text()) # type: ignore
 
 
 class ServiceWebsockets:
@@ -86,7 +86,7 @@ class ServiceWebsockets:
             pass
 
         if connection.code:
-            self._del_connection(connection)
+            self._del_connection(group_name, connection)
 
     def on(self, event: str):
         """Register event handler."""
@@ -104,7 +104,7 @@ class ServiceWebsockets:
 
         for group in self.connections.values():
             for c in group.values():
-                await c.send_text(text)
+                await c.send_text(text) # type: ignore
 
     async def send_to_group(
         self,
@@ -117,4 +117,4 @@ class ServiceWebsockets:
             text = self.aes.encrypt([event, args, kwargs])
 
             for c in self.connections[group_name].values():
-                await c.send_text(text)
+                await c.send_text(text) # type: ignore
