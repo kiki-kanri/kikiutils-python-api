@@ -1,6 +1,6 @@
 from asyncio import create_task
-from blacksheep import WebSocket
 from functools import wraps
+from sanic import Websocket
 from typing import Callable, Coroutine
 
 from kikiutils.aes import AesCrypt
@@ -9,18 +9,18 @@ from kikiutils.aes import AesCrypt
 class ServiceWebsocketConnection:
     code: str = ''
 
-    def __init__(self, aes: AesCrypt, websocket: WebSocket):
+    def __init__(self, aes: AesCrypt, websocket: Websocket):
         self.aes = aes
         self.ws = websocket
 
     async def emit(self, event: str, *args, **kwargs):
-        await self.send_text(self.aes.encrypt([event, args, kwargs]))
+        await self.send_data(self.aes.encrypt([event, args, kwargs]))
 
-    async def send_text(self, text: str):
-        await self.ws.send_text(text)
+    async def send(self, data: bytes | str):
+        await self.ws.send(data)
 
     async def recv_data(self) -> list:
-        return self.aes.decrypt(await self.ws.receive_text())
+        return self.aes.decrypt(await self.ws.recv())
 
 
 class ServiceWebsockets:
@@ -68,8 +68,7 @@ class ServiceWebsockets:
                     )
                 )
 
-    async def accept_and_listen(self, group_name: str, websocket: WebSocket):
-        await websocket.accept()
+    async def accept_and_listen(self, group_name: str, websocket: Websocket):
         connection = ServiceWebsocketConnection(self.aes, websocket)
         data = None
 
@@ -104,7 +103,7 @@ class ServiceWebsockets:
 
         for group in self.connections.values():
             for c in group.values():
-                await c.send_text(data)
+                await c.send(data)
 
     async def send_to_group(
         self,
@@ -117,4 +116,4 @@ class ServiceWebsockets:
             data = self.aes.encrypt([event, args, kwargs])
 
             for c in self.connections[group_name].values():
-                await c.send_text(data)
+                await c.send(data)
