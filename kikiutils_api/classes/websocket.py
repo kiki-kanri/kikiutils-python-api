@@ -68,7 +68,7 @@ class WebsocketClient:
 
     async def connect(self):
         self.ws = await Connect(**self.connect_kwargs)
-        await self.send('init', code=self.code)
+        await self.emit('init', code=self.code)
         self._create_task(self._check())
         self._listen_task = self._create_task(self._listen())
 
