@@ -88,25 +88,14 @@ class ServiceWebsockets:
         if connection.code:
             self._del_connection(group_name, connection)
 
-    def on(self, event: str):
-        """Register event handler."""
-
-        def decorator(view_func):
-            @wraps(view_func)
-            async def wrapped_view(*args, **kwargs):
-                await view_func(*args, **kwargs)
-            self.event_handlers[event] = wrapped_view
-            return wrapped_view
-        return decorator
-
-    async def send_to_all(self, event: str, *args, **kwargs):
+    async def emit_to_all(self, event: str, *args, **kwargs):
         data = self.aes.encrypt([event, args, kwargs])
 
         for group in self.connections.values():
             for c in group.values():
                 await c.send_text(data)
 
-    async def send_to_group(
+    async def emit_to_group(
         self,
         group_name: str,
         event: str,
@@ -118,3 +107,14 @@ class ServiceWebsockets:
 
             for c in self.connections[group_name].values():
                 await c.send_text(data)
+
+    def on(self, event: str):
+        """Register event handler."""
+
+        def decorator(view_func):
+            @wraps(view_func)
+            async def wrapped_view(*args, **kwargs):
+                await view_func(*args, **kwargs)
+            self.event_handlers[event] = wrapped_view
+            return wrapped_view
+        return decorator

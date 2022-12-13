@@ -72,6 +72,9 @@ class WebsocketClient:
         self._create_task(self._check())
         self._listen_task = self._create_task(self._listen())
 
+    async def emit(self, event: str, *args, **kwargs):
+        await self.ws.send(self.aes.encrypt([event, args, kwargs]))
+
     def on(self, event: str):
         """Register event handler."""
 
@@ -82,6 +85,3 @@ class WebsocketClient:
             self.event_handlers[event] = wrapped_view
             return wrapped_view
         return decorator
-
-    async def send(self, event: str, *args, **kwargs):
-        await self.ws.send(self.aes.encrypt([event, args, kwargs]))
