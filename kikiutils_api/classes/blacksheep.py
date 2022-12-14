@@ -5,12 +5,22 @@ from typing import Callable, Coroutine
 
 from kikiutils.aes import AesCrypt
 
+from utils.blacksheep import get_ip
+
 
 class ServiceWebsocketConnection:
     code: str = ''
 
-    def __init__(self, aes: AesCrypt, websocket: WebSocket):
+    def __init__(
+        self,
+        aes: AesCrypt,
+        exter_headers: dict,
+        ip: str,
+        websocket: WebSocket
+    ):
         self.aes = aes
+        self.exter_headers = exter_headers
+        self.ip = ip
         self.ws = websocket
 
     async def emit(self, event: str, *args, **kwargs):
@@ -68,9 +78,21 @@ class ServiceWebsockets:
                     )
                 )
 
-    async def accept_and_listen(self, group_name: str, websocket: WebSocket):
+    async def accept_and_listen(
+        self,
+        group_name: str,
+        websocket: WebSocket,
+        extra_headers: dict = {}
+    ):
         await websocket.accept()
-        connection = ServiceWebsocketConnection(self.aes, websocket)
+        ip = get_ip(websocket)
+        connection = ServiceWebsocketConnection(
+            self.aes,
+            extra_headers,
+            ip,
+            websocket
+        )
+
         data = None
 
         try:

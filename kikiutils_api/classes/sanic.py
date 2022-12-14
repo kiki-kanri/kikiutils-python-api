@@ -1,6 +1,6 @@
 from asyncio import create_task
 from functools import wraps
-from sanic import Websocket
+from sanic import Request, Websocket
 from typing import Callable, Coroutine
 
 from kikiutils.aes import AesCrypt
@@ -9,8 +9,16 @@ from kikiutils.aes import AesCrypt
 class ServiceWebsocketConnection:
     code: str = ''
 
-    def __init__(self, aes: AesCrypt, websocket: Websocket):
+    def __init__(
+        self,
+        aes: AesCrypt,
+        exter_headers: dict,
+        ip: str,
+        websocket: Websocket
+    ):
         self.aes = aes
+        self.exter_headers = exter_headers
+        self.ip = ip
         self.ws = websocket
 
     async def emit(self, event: str, *args, **kwargs):
@@ -68,8 +76,20 @@ class ServiceWebsockets:
                     )
                 )
 
-    async def accept_and_listen(self, group_name: str, websocket: Websocket):
-        connection = ServiceWebsocketConnection(self.aes, websocket)
+    async def accept_and_listen(
+        self,
+        request: Request,
+        group_name: str,
+        websocket: Websocket,
+        extra_headers: dict = {}
+    ):
+        connection = ServiceWebsocketConnection(
+            self.aes,
+            extra_headers,
+            request.remote_addr,
+            websocket
+        )
+
         data = None
 
         try:
