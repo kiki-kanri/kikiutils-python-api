@@ -40,7 +40,7 @@ class BaseServiceWebsockets:
                 uuid: int | None = kwargs.get('__wait_event_uuid')
 
                 if uuid and uuid in self.waiting_events[event]:
-                    self.waiting_events[event][uuid].set_result(True)
+                    self.waiting_events[event][uuid].set_result((args, kwargs))
                     self.waiting_events[event].pop(uuid, None)
 
     @abstractmethod
@@ -61,7 +61,7 @@ class BaseServiceWebsockets:
             self.waiting_events[wait_event] = {uuid: Future()}
 
         await self.emit_to_name(name, event, *args, **kwargs)
-        await self.waiting_events[wait_event][uuid]
+        return await self.waiting_events[wait_event][uuid]
 
     @abstractmethod
     async def emit_to_name(

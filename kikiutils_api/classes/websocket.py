@@ -60,7 +60,7 @@ class WebsocketClient:
                 uuid: int | None = kwargs.get('__wait_event_uuid')
 
                 if uuid and uuid in self.waiting_events[event]:
-                    self.waiting_events[event][uuid].set_result(True)
+                    self.waiting_events[event][uuid].set_result((args, kwargs))
                     self.waiting_events[event].pop(uuid, None)
 
     async def connect(self):
@@ -88,7 +88,7 @@ class WebsocketClient:
             self.waiting_events[wait_event] = {uuid: Future()}
 
         await self.emit(event, *args, **kwargs)
-        await self.waiting_events[wait_event][uuid]
+        return await self.waiting_events[wait_event][uuid]
 
     def on(self, event: str):
         """Register event handler."""
