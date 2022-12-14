@@ -117,14 +117,23 @@ class ServiceWebsockets:
         self,
         group_name: str,
         event: str,
+        send_connections_limit: int = 0,
         *args,
         **kwargs
     ):
         if group_name in self.connections:
             data = self.aes.encrypt([event, args, kwargs])
+            connections = self.connections[group_name].values()
 
-            for c in self.connections[group_name].values():
-                await c.send(data)
+            if not send_connections_limit:
+                for c in connections:
+                    await c.send(data)
+            else:
+                for index, c in enumerate(connections, 1):
+                    await c.send(data)
+
+                    if index >= send_connections_limit:
+                        break
 
     def on(self, event: str):
         """Register event handler."""
