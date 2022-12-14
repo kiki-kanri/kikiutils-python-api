@@ -1,8 +1,7 @@
-from asyncio import create_task
-from functools import wraps
 from kikiutils.aes import AesCrypt
 from sanic import Request, Websocket
-from typing import Callable, Coroutine
+
+from . import BaseServiceWebsockets
 
 
 class ServiceWebsocketConnection:
@@ -13,15 +12,17 @@ class ServiceWebsocketConnection:
         aes: AesCrypt,
         exter_headers: dict,
         ip: str,
+        name: str,
         websocket: Websocket
     ):
         self.aes = aes
         self.exter_headers = exter_headers
         self.ip = ip
+        self.name = name
         self.ws = websocket
 
     async def emit(self, event: str, *args, **kwargs):
-        await self.send_data(self.aes.encrypt([event, args, kwargs]))
+        await self.send(self.aes.encrypt([event, args, kwargs]))
 
     async def send(self, data: bytes | str):
         await self.ws.send(data)
@@ -30,118 +31,54 @@ class ServiceWebsocketConnection:
         return self.aes.decrypt(await self.ws.recv())
 
 
-class ServiceWebsockets:
+class ServiceWebsockets(BaseServiceWebsockets):
+    connections: dict[str, ServiceWebsocketConnection]
+
     def __init__(self, aes: AesCrypt, service_name: str):
-        self.aes = aes
-        self.connections: dict[
-            str,
-            dict[str, ServiceWebsocketConnection]
-        ] = {}
-
-        self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
-        self.service_name = service_name
-
-    def _add_connection(
-        self,
-        group_name: str,
-        connection: ServiceWebsocketConnection
-    ):
-        if group_name in self.connections:
-            self.connections[group_name][connection.code] = connection
-        else:
-            self.connections[group_name] = {connection.code: connection}
-
-    def _del_connection(
-        self,
-        group_name: str,
-        connection: ServiceWebsocketConnection
-    ):
-        if group_name in self.connections:
-            self.connections[group_name].pop(connection.code, None)
-
-            if not self.connections[group_name]:
-                self.connections.pop(group_name, None)
-
-    async def _listen(self, connection: ServiceWebsocketConnection):
-        while True:
-            event, args, kwargs = await connection.recv_data()
-
-            if event in self.event_handlers:
-                create_task(
-                    self.event_handlers[event](
-                        connection,
-                        *args,
-                        **kwargs
-                    )
-                )
+        super().__init__(aes, service_name)
 
     async def accept_and_listen(
         self,
-        request: Request,
-        group_name: str,
+        rq: Request,
+        name: str,
         websocket: Websocket,
         extra_headers: dict = {}
     ):
-        connection = ServiceWebsocketConnection(
-            self.aes,
-            extra_headers,
-            request.remote_addr,
-            websocket
-        )
-
-        data = None
-
         try:
+            connection = ServiceWebsocketConnection(
+                self.aes,
+                extra_headers,
+                rq.remote_addr,
+                name,
+                websocket
+            )
+
             data = await connection.recv_data()
 
             if data[0] != 'init' or 'code' not in data[2]:
                 raise ValueError('')
 
             connection.code = data[2]['code']
-            self._add_connection(group_name, connection)
+            self._add_connection(name, connection)
             await self._listen(connection)
         except:
             pass
 
-        if connection.code:
-            self._del_connection(group_name, connection)
+        self._del_connection(name)
 
     async def emit_to_all(self, event: str, *args, **kwargs):
         data = self.aes.encrypt([event, args, kwargs])
 
-        for group in self.connections.values():
-            for c in group.values():
-                await c.send(data)
+        for connection in self.connections.values():
+            await connection.send(data)
 
-    async def emit_to_group(
+    async def emit_to_name(
         self,
-        group_name: str,
+        name: str,
         event: str,
-        send_connections_limit: int = 0,
         *args,
         **kwargs
     ):
-        if group_name in self.connections:
+        if connection := self.connections.get(name):
             data = self.aes.encrypt([event, args, kwargs])
-            connections = self.connections[group_name].values()
-
-            if not send_connections_limit:
-                for c in connections:
-                    await c.send(data)
-            else:
-                for index, c in enumerate(connections, 1):
-                    await c.send(data)
-
-                    if index >= send_connections_limit:
-                        break
-
-    def on(self, event: str):
-        """Register event handler."""
-
-        def decorator(view_func):
-            @wraps(view_func)
-            async def wrapped_view(*args, **kwargs):
-                await view_func(*args, **kwargs)
-            self.event_handlers[event] = wrapped_view
-            return wrapped_view
-        return decorator
+            await connection.send(data)

@@ -85,3 +85,15 @@ class WebsocketClient:
             self.event_handlers[event] = wrapped_view
             return wrapped_view
         return decorator
+
+    async def wait_connect_success(self):
+        """Wait for connect success."""
+
+        while True:
+            try:
+                await self.connect()
+                break
+            except KeyboardInterrupt:
+                exit()
+            except:
+                await sleep(1)
