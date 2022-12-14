@@ -1,9 +1,8 @@
 from asyncio import create_task
 from functools import wraps
+from kikiutils.aes import AesCrypt
 from sanic import Request, Websocket
 from typing import Callable, Coroutine
-
-from kikiutils.aes import AesCrypt
 
 
 class ServiceWebsocketConnection:

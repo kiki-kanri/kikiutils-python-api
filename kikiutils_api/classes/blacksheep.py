@@ -1,11 +1,10 @@
 from asyncio import create_task
 from blacksheep import WebSocket
 from functools import wraps
+from kikiutils.aes import AesCrypt
 from typing import Callable, Coroutine
 
-from kikiutils.aes import AesCrypt
-
-from utils.blacksheep import get_ip
+from ..utils.blacksheep import get_ip
 
 
 class ServiceWebsocketConnection:
