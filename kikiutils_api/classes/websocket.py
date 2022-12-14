@@ -33,7 +33,7 @@ class WebsocketClient:
 
         self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
         self.name = name
-        self.waiting_events: dict[str, dict[int, Future]] = {}
+        self.waiting_events: dict[str, dict[str, Future]] = {}
 
     async def _check(self):
         try:
@@ -79,7 +79,7 @@ class WebsocketClient:
         *args,
         **kwargs
     ):
-        uuid = uuid1().int
+        uuid = uuid1().hex
         kwargs['__wait_event_uuid'] = uuid
 
         if wait_event in self.waiting_events:

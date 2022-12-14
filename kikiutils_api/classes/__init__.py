@@ -12,7 +12,7 @@ class BaseServiceWebsockets:
         self.connections = {}
         self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
         self.service_name = service_name
-        self.waiting_events: dict[str, dict[int, Future]] = {}
+        self.waiting_events: dict[str, dict[str, Future]] = {}
 
     @abstractmethod
     def _add_connection(self, name: str, connection):
@@ -52,7 +52,7 @@ class BaseServiceWebsockets:
         *args,
         **kwargs
     ):
-        uuid = uuid1().int
+        uuid = uuid1().hex
         kwargs['__wait_event_uuid'] = uuid
 
         if wait_event in self.waiting_events:
