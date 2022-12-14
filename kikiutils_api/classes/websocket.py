@@ -42,15 +42,7 @@ class WebsocketClient:
             self._create_task(self._check())
         except:
             self._listen_task.cancel()
-
-            while True:
-                await sleep(1)
-
-                try:
-                    await self.connect()
-                    break
-                except:
-                    pass
+            await self.wait_connect_success()
 
     def _create_task(self, coro: Coroutine):
         if self.loop is None:
