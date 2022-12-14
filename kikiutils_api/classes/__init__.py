@@ -1,8 +1,9 @@
 from abc import abstractmethod
-from asyncio import create_task
+from asyncio import create_task, Future
 from functools import wraps
 from kikiutils.aes import AesCrypt
 from typing import Callable, Coroutine
+from uuid import uuid1
 
 
 class BaseServiceWebsockets:
@@ -11,6 +12,7 @@ class BaseServiceWebsockets:
         self.connections = {}
         self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
         self.service_name = service_name
+        self.waiting_events: dict[str, dict[int, Future]] = {}
 
     @abstractmethod
     def _add_connection(self, name: str, connection):
@@ -33,6 +35,43 @@ class BaseServiceWebsockets:
                         **kwargs
                     )
                 )
+
+            if event in self.waiting_events:
+                uuid: int | None = kwargs.get('__wait_event_uuid')
+
+                if uuid and uuid in self.waiting_events[event]:
+                    self.waiting_events[event][uuid].set_result(True)
+                    self.waiting_events[event].pop(uuid, None)
+
+    @abstractmethod
+    async def emit_and_wait_event(
+        self,
+        name: str,
+        event: str,
+        wait_event: str,
+        *args,
+        **kwargs
+    ):
+        uuid = uuid1().int
+        kwargs['__wait_event_uuid'] = uuid
+
+        if wait_event in self.waiting_events:
+            self.waiting_events[wait_event][uuid] = Future()
+        else:
+            self.waiting_events[wait_event] = {uuid: Future()}
+
+        await self.emit_to_name(name, event, *args, **kwargs)
+        await self.waiting_events[wait_event][uuid]
+
+    @abstractmethod
+    async def emit_to_name(
+        self,
+        name: str,
+        event: str,
+        *args,
+        **kwargs
+    ):
+        pass
 
     @abstractmethod
     def on(self, event: str):

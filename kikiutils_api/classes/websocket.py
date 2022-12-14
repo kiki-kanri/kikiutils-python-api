@@ -1,8 +1,9 @@
-from asyncio import AbstractEventLoop, get_event_loop, sleep, Task
+from asyncio import AbstractEventLoop, Future, get_event_loop, sleep, Task
 from functools import wraps
 from kikiutils.aes import AesCrypt
 from kikiutils.string import random_str
 from typing import Callable, Coroutine
+from uuid import uuid1
 from websockets.legacy.client import Connect
 
 
@@ -30,12 +31,9 @@ class WebsocketClient:
             'uri': url
         }
 
-        self.event_handlers: dict[
-            str,
-            Callable[..., Coroutine]
-        ] = {}
-
+        self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
         self.name = name
+        self.waiting_events: dict[str, dict[int, Future]] = {}
 
     async def _check(self):
         try:
@@ -66,6 +64,13 @@ class WebsocketClient:
             if event in self.event_handlers:
                 self._create_task(self.event_handlers[event](*args, **kwargs))
 
+            if event in self.waiting_events:
+                uuid: int | None = kwargs.get('__wait_event_uuid')
+
+                if uuid and uuid in self.waiting_events[event]:
+                    self.waiting_events[event][uuid].set_result(True)
+                    self.waiting_events[event].pop(uuid, None)
+
     async def connect(self):
         self.ws = await Connect(**self.connect_kwargs)
         await self.emit('init', code=self.code)
@@ -74,6 +79,24 @@ class WebsocketClient:
 
     async def emit(self, event: str, *args, **kwargs):
         await self.ws.send(self.aes.encrypt([event, args, kwargs]))
+
+    async def emit_and_wait_event(
+        self,
+        event: str,
+        wait_event: str,
+        *args,
+        **kwargs
+    ):
+        uuid = uuid1().int
+        kwargs['__wait_event_uuid'] = uuid
+
+        if wait_event in self.waiting_events:
+            self.waiting_events[wait_event][uuid] = Future()
+        else:
+            self.waiting_events[wait_event] = {uuid: Future()}
+
+        await self.emit(event, *args, **kwargs)
+        await self.waiting_events[wait_event][uuid]
 
     def on(self, event: str):
         """Register event handler."""
