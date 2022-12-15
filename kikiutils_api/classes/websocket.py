@@ -8,6 +8,7 @@ from websockets.legacy.client import Connect
 
 
 class WebsocketClient:
+    _check_task: Task
     _listen_task: Task
     code: str
     loop: AbstractEventLoop = None
@@ -39,7 +40,7 @@ class WebsocketClient:
         try:
             await sleep(self.check_interval)
             await self.ws.ping()
-            self._create_task(self._check())
+            self._check_task = self._create_task(self._check())
         except:
             self._listen_task.cancel()
             await self.wait_connect_success()
@@ -66,8 +67,13 @@ class WebsocketClient:
     async def connect(self):
         self.ws = await Connect(**self.connect_kwargs)
         await self.emit('init', code=self.code)
-        self._create_task(self._check())
+        self._check_task = self._create_task(self._check())
         self._listen_task = self._create_task(self._listen())
+
+    async def disconnect(self):
+        self._check_task.cancel()
+        self._listen_task.cancel()
+        await self.ws.close()
 
     async def emit(self, event: str, *args, **kwargs):
         await self.ws.send(self.aes.encrypt([event, args, kwargs]))

@@ -74,6 +74,10 @@ class BaseServiceWebsockets:
         pass
 
     @abstractmethod
+    def get_connection(self, name):
+        return self.connections.get(name)
+
+    @abstractmethod
     def on(self, event: str):
         """Register event handler."""
 
