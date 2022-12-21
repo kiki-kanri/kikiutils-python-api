@@ -1,3 +1,4 @@
+from kikiutils.json import dict_key_camel_to_snake
 from sanic import Request, text
 
 
@@ -20,4 +21,4 @@ def get_request_data(rq: Request) -> dict[str]:
         for k in rq_kwargs:
             request_data[k] = rq_kwargs.get(k)
 
-    return request_data
+    return dict_key_camel_to_snake(request_data)
