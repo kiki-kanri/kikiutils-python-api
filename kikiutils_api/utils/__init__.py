@@ -1,7 +1,6 @@
-from json import loads
 from kikiutils.check import isdict
+from kikiutils.json import oloads
 from typing import Union
-from validator import validate as _package_validate
 
 from ..classes.transmission import DataTransmissionSecret
 
@@ -53,38 +52,6 @@ async def data_transmission_exec(
 def parse_dict_value_json(data: dict):
     for k, v in data.items():
         try:
-            data[k] = loads(v)
+            data[k] = oloads(v)
         except:
             pass
-
-
-async def validate_and_exec(
-    rules: dict[str],
-    request_data: dict[str, str],
-    parse_json: bool,
-    use_dict: bool,
-    view_func,
-    args: tuple,
-    kwargs: dict
-):
-    # Strip data
-    for k, v in request_data.items():
-        request_data[k] = v.strip()
-
-    # Validate
-    result, data, _ = _package_validate(
-        request_data,
-        rules,
-        True
-    )
-
-    if result:
-        if parse_json:
-            parse_dict_value_json(data)
-
-        if use_dict:
-            kwargs['data'] = data
-        else:
-            kwargs.update(data)
-
-        return await view_func(*args, **kwargs)

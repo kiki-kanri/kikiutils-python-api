@@ -9,7 +9,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=True,
-    version='1.2.9',
+    version='1.3.0',
     description='Utils functions with api data process',
     author='kiki-kanri',
     author_email='a470666@gmail.com',
@@ -17,7 +17,6 @@ setup(
     install_requires=[
         'aiohttp[speedups]',
         'kiki-utils',
-        'validator',
         'websockets'
     ],
     python_requires=">=3.6"

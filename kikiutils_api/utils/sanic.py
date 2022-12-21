@@ -1,4 +1,12 @@
-from sanic import Request
+from sanic import Request, text
+
+
+error = text('error', 500)
+rp_403 = text('', 403)
+rp_404 = text('', 404)
+rp_409 = text('', 409)
+rp_422 = text('', 422)
+success = text('success')
 
 
 def get_request_data(rq: Request) -> dict[str]:
