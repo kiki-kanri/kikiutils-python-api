@@ -61,6 +61,12 @@ def validate(rules: BaseClass, data_name: str = 'data'):
                         setattr(inited_rules, key, rules_dicts[key])
                 else:
                     try:
+                        if value_tpye is bool:
+                            try:
+                                rq_value = oloads(rq_value)
+                            except:
+                                pass
+
                         if value_tpye is dict or value_tpye is list:
                             setattr(inited_rules, key, oloads(rq_value))
                         else:
