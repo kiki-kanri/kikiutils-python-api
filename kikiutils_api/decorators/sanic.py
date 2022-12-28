@@ -1,7 +1,9 @@
 from functools import wraps
+from kikiutils.aes import AesCrypt
 from kikiutils.check import isstr
 from kikiutils.json import oloads
 from sanic import Request, text
+from sanic.server.websockets.connection import WebSocketConnection
 
 from ..classes.transmission import DataTransmissionSecret
 from ..utils import data_transmission_exec
@@ -76,5 +78,28 @@ def validate(rules: BaseClass, data_name: str = 'data'):
 
             kwargs[data_name] = inited_rules
             return await view_func(rq, *args, **kwargs)
+        return wrapped_view
+    return decorator
+
+
+# Websocket
+
+def service_websocket(aes: AesCrypt):
+    def decorator(view_func):
+        @wraps(view_func)
+        async def wrapped_view(
+            rq: Request,
+            ws: WebSocketConnection,
+            *args,
+            **kwargs
+        ):
+            if extra_info := rq.headers.get('extra-info'):
+                try:
+                    data = aes.decrypt(extra_info)
+                except:
+                    return
+
+                return await view_func(rq, ws, extra_data=data, *args, **kwargs)
+
         return wrapped_view
     return decorator

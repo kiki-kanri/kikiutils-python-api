@@ -1,5 +1,6 @@
 from kikiutils.aes import AesCrypt
-from sanic import Request, Websocket
+from sanic import Request
+from sanic.server.websockets.connection import WebSocketConnection
 
 from . import BaseServiceWebsockets
 
@@ -13,7 +14,7 @@ class ServiceWebsocketConnection:
         exter_headers: dict,
         ip: str,
         name: str,
-        websocket: Websocket
+        websocket: WebSocketConnection
     ):
         self.aes = aes
         self.exter_headers = exter_headers
@@ -41,7 +42,7 @@ class ServiceWebsockets(BaseServiceWebsockets):
         self,
         rq: Request,
         name: str,
-        websocket: Websocket,
+        websocket: WebSocketConnection,
         extra_headers: dict = {}
     ):
         try:
