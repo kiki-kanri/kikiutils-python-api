@@ -11,13 +11,13 @@ class ServiceWebsocketConnection:
     def __init__(
         self,
         aes: AesCrypt,
-        exter_headers: dict,
+        extra_headers: dict,
         ip: str,
         name: str,
         websocket: WebSocketConnection
     ):
         self.aes = aes
-        self.exter_headers = exter_headers
+        self.extra_headers = extra_headers
         self.ip = ip
         self.name = name
         self.ws = websocket
