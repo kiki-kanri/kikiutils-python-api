@@ -65,12 +65,16 @@ def validate(rules: BaseClass, data_name: str = 'data'):
                     try:
                         if value_tpye is bool:
                             try:
-                                rq_value = oloads(rq_value)
+                                rq_value = rq_value.lower() == 'true'
                             except:
                                 pass
 
                         if value_tpye is dict or value_tpye is list:
-                            setattr(inited_rules, key, oloads(rq_value))
+                            setattr(
+                                inited_rules,
+                                key,
+                                rq_value if isinstance(rq_value, (dict, list)) else oloads(rq_value)
+                            )
                         else:
                             setattr(inited_rules, key, value_tpye(rq_value))
                     except:
