@@ -2,7 +2,7 @@ from abc import abstractmethod
 from asyncio import create_task, Future
 from functools import wraps
 from kikiutils.aes import AesCrypt
-from typing import Callable, Coroutine
+from typing import Callable, Coroutine, Optional
 from uuid import uuid1
 
 
@@ -37,7 +37,7 @@ class BaseServiceWebsockets:
                 )
 
             if event in self.waiting_events:
-                uuid: int | None = kwargs.get('__wait_event_uuid')
+                uuid: Optional[str] = kwargs.get('__wait_event_uuid')
 
                 if uuid and uuid in self.waiting_events[event]:
                     self.waiting_events[event][uuid].set_result((args, kwargs))

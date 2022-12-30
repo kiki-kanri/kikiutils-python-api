@@ -2,7 +2,7 @@ from asyncio import AbstractEventLoop, Future, get_event_loop, sleep, Task
 from functools import wraps
 from kikiutils.aes import AesCrypt
 from kikiutils.string import random_str
-from typing import Callable, Coroutine
+from typing import Callable, Coroutine, Optional
 from uuid import uuid1
 from websockets.legacy.client import Connect
 
@@ -58,7 +58,7 @@ class WebsocketClient:
                 self._create_task(self.event_handlers[event](*args, **kwargs))
 
             if event in self.waiting_events:
-                uuid: int | None = kwargs.get('__wait_event_uuid')
+                uuid: Optional[str] = kwargs.get('__wait_event_uuid')
 
                 if uuid and uuid in self.waiting_events[event]:
                     self.waiting_events[event][uuid].set_result((args, kwargs))

@@ -1,5 +1,5 @@
 from blacksheep import Request, WebSocket
-from typing import Callable, TypeVar
+from typing import Callable, Optional, TypeVar, Union
 
 
 T = TypeVar('T')
@@ -26,15 +26,15 @@ async def get_file(rq: Request, file_name: str):
     return _get_list_item(files, lambda x: x.name == bfile_name)
 
 
-def get_ip(rq_or_ws: Request | WebSocket):
+def get_ip(rq_or_ws: Union[Request, WebSocket]):
     for name in _is_ip_header_names:
         if ip := rq_or_ws.headers.get(name):
             return ip[0].decode()
 
 
-def get_rq(args: tuple) -> Request | None:
+def get_rq(args: tuple) -> Optional[Request]:
     return _get_list_item(args, lambda x: _is_rq(x))
 
 
-def get_ws(args: tuple) -> WebSocket | None:
+def get_ws(args: tuple) -> Optional[WebSocket]:
     return _get_list_item(args, lambda x: _is_ws(x))

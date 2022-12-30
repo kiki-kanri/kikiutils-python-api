@@ -8,7 +8,7 @@ from kikiutils.log import logger
 from kikiutils.string import random_str, s2b
 from kikiutils.uuid import get_uuid
 from random import randint, shuffle
-from typing import Union
+from typing import Optional, Union
 
 
 class DataTransmission:
@@ -64,7 +64,7 @@ class DataTransmission:
         hash_data = self.aes.encrypt(data_list)
         return hash_data
 
-    def process_hash_data(self, hash_text: str) -> dict | None:
+    def process_hash_data(self, hash_text: str) -> Optional[dict]:
         try:
             return {
                 i[0]: i[1]

@@ -1,6 +1,7 @@
 from kikiutils.aes import AesCrypt
 from sanic import Request
 from sanic.server.websockets.connection import WebSocketConnection
+from typing import Union
 
 from . import BaseServiceWebsockets
 
@@ -25,7 +26,7 @@ class ServiceWebsocketConnection:
     async def emit(self, event: str, *args, **kwargs):
         await self.send(self.aes.encrypt([event, args, kwargs]))
 
-    async def send(self, data: bytes | str):
+    async def send(self, data: Union[bytes, str]):
         await self.ws.send(data)
 
     async def recv_data(self) -> list:
