@@ -15,14 +15,6 @@ class DataTransmission:
     aes: AesCrypt
     api_base_url: str
 
-    def __init__(
-        self,
-        aes: AesCrypt,
-        api_base_url: str = ''
-    ):
-        self.aes = aes
-        self.api_base_url = api_base_url
-
     @classmethod
     def hash_data(cls, data: dict):
         for _ in range(1, randint(randint(2, 5), randint(6, 16))):
@@ -45,7 +37,7 @@ class DataTransmission:
     async def request(
         cls,
         url: str,
-        data: dict,
+        data: dict = {},
         method: str = 'post',
         data_add_uuid: bool = False,
         wait_for_success: bool = True,
