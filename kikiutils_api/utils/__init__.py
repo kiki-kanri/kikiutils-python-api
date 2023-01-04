@@ -2,12 +2,12 @@ from kikiutils.check import isdict
 from kikiutils.json import oloads
 from typing import Union
 
-from ..classes.transmission import DataTransmissionSecret
+from ..classes.transmission import DataTransmission
 
 
 async def data_transmission_exec(
     hash_data: Union[bytes, str],
-    secret_classes: tuple[DataTransmissionSecret],
+    secret_classes: tuple[DataTransmission],
     error_404,
     parse_json: bool,
     kwarg_name: str,
@@ -17,7 +17,7 @@ async def data_transmission_exec(
     is_blacksheep: bool = False
 ):
     for secret_class in secret_classes:
-        data: dict = secret_class.data_transmission.process_hash_data(
+        data: dict = secret_class.process_hash_data(
             hash_data
         )
 
@@ -46,7 +46,7 @@ async def data_transmission_exec(
     elif result != True:
         return result
 
-    return secret_class.data_transmission.hash_data(response_data)
+    return secret_class.hash_data(response_data)
 
 
 def parse_dict_value_json(data: dict):

@@ -2,13 +2,13 @@ from blacksheep import not_found
 from functools import wraps
 from kikiutils.aes import AesCrypt
 
-from ..classes.transmission import DataTransmissionSecret
+from ..classes.transmission import DataTransmission
 from ..utils import data_transmission_exec
 from ..utils.blacksheep import get_file, get_rq, get_ws
 
 
 def data_transmission_api(
-    *secret_classes: DataTransmissionSecret,
+    *secret_classes: DataTransmission,
     parse_json: bool = True,
     kwarg_name: str = 'data'
 ):

@@ -5,7 +5,7 @@ from kikiutils.json import oloads
 from sanic import Request, text
 from sanic.server.websockets.connection import WebSocketConnection
 
-from ..classes.transmission import DataTransmissionSecret
+from ..classes.transmission import DataTransmission
 from ..utils import data_transmission_exec
 from ..utils.sanic import get_request_data, rp_404, rp_422
 
@@ -13,7 +13,7 @@ from ..utils.sanic import get_request_data, rp_404, rp_422
 # DataTransmission
 
 def data_transmission_api(
-    *secret_classes: DataTransmissionSecret,
+    *secret_classes: DataTransmission,
     parse_json: bool = True,
     kwarg_name: str = 'data'
 ):
