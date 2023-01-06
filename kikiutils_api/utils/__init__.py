@@ -1,7 +1,7 @@
 from inspect import signature
 from kikiutils.check import isdict
 from kikiutils.json import oloads
-from typing import Union
+from typing import Callable, Union
 
 from ..classes.transmission import DataTransmission
 
@@ -50,10 +50,10 @@ async def data_transmission_exec(
     return secret_class.hash_data(response_data)
 
 
-def get_func_annotation_index(func, annotation_type):
-    s = signature(func)
+def get_func_annotation_index(func: Callable, annotation_type):
+    parameter_values = signature(func).parameters.values()
 
-    for i, v in enumerate(s.parameters.values()):
+    for i, v in enumerate(parameter_values):
         if v.annotation is annotation_type:
             return i
 

@@ -13,7 +13,7 @@ def data_transmission_api(
     kwarg_name: str = 'data'
 ):
     def decorator(view_func):
-        rq_index = get_func_annotation_index(view_func, Request, True)
+        rq_index = get_func_annotation_index(view_func, Request)
 
         @wraps(view_func)
         async def wrapped_view(*args):
@@ -39,7 +39,7 @@ def data_transmission_api(
 
 def service_websocket(aes: AesCrypt):
     def decorator(view_func):
-        ws_index = get_func_annotation_index(view_func, WebSocket, True)
+        ws_index = get_func_annotation_index(view_func, WebSocket)
 
         @wraps(view_func)
         async def wrapped_view(*args):
