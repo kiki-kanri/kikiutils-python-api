@@ -6,7 +6,7 @@ from sanic import Request, text
 from sanic.server.websockets.connection import WebSocketConnection
 
 from ..classes.transmission import DataTransmission
-from ..utils import data_transmission_exec
+from ..utils import data_transmission_exec, get_func_annotation_index
 from ..utils.sanic import get_request_data, rp_404, rp_422
 
 
@@ -18,9 +18,11 @@ def data_transmission_api(
     kwarg_name: str = 'data'
 ):
     def decorator(view_func):
+        rq_index = get_func_annotation_index(view_func, Request)
+
         @wraps(view_func)
-        async def wrapped_view(rq: Request, *args, **kwargs):
-            if (hash_file := rq.files.get('hash_file')) is None:
+        async def wrapped_view(*args, **kwargs):
+            if (hash_file := args[rq_index].files.get('hash_file')) is None:
                 return rp_404
 
             result = await data_transmission_exec(
@@ -30,7 +32,7 @@ def data_transmission_api(
                 parse_json,
                 kwarg_name,
                 view_func,
-                (rq, *args),
+                args,
                 kwargs
             )
 
@@ -49,9 +51,11 @@ class BaseClass:
 
 def validate(rules: BaseClass, data_name: str = 'data'):
     def decorator(view_func):
+        rq_index = get_func_annotation_index(view_func, Request)
+
         @wraps(view_func)
-        async def wrapped_view(rq: Request, *args, **kwargs):
-            request_data = get_request_data(rq)
+        async def wrapped_view(*args, **kwargs):
+            request_data = get_request_data(args[rq_index])
             inited_rules = rules()
             rules_dicts = rules.__dict__
 
@@ -81,7 +85,7 @@ def validate(rules: BaseClass, data_name: str = 'data'):
                         return rp_422
 
             kwargs[data_name] = inited_rules
-            return await view_func(rq, *args, **kwargs)
+            return await view_func(*args, **kwargs)
         return wrapped_view
     return decorator
 
@@ -90,20 +94,17 @@ def validate(rules: BaseClass, data_name: str = 'data'):
 
 def service_websocket(aes: AesCrypt):
     def decorator(view_func):
+        rq_index = get_func_annotation_index(view_func, Request)
+
         @wraps(view_func)
-        async def wrapped_view(
-            rq: Request,
-            ws: WebSocketConnection,
-            *args,
-            **kwargs
-        ):
-            if extra_info := rq.headers.get('extra-info'):
+        async def wrapped_view(*args, **kwargs):
+            if extra_info := args[rq_index].headers.get('extra-info'):
                 try:
                     data = aes.decrypt(extra_info)
                 except:
                     return
 
-                return await view_func(rq, ws, extra_data=data, *args, **kwargs)
+                return await view_func(*args, **kwargs, extra_data=data)
 
         return wrapped_view
     return decorator

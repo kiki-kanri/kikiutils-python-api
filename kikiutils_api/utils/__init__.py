@@ -1,3 +1,4 @@
+from inspect import signature
 from kikiutils.check import isdict
 from kikiutils.json import oloads
 from typing import Union
@@ -47,6 +48,16 @@ async def data_transmission_exec(
         return result
 
     return secret_class.hash_data(response_data)
+
+
+def get_func_annotation_index(func, annotation_type):
+    s = signature(func)
+
+    for i, v in enumerate(s.parameters.values()):
+        if v.annotation is annotation_type:
+            return i
+
+    raise ValueError(f'Function {func} need set type {annotation_type} parameter!')
 
 
 def parse_dict_value_json(data: dict):

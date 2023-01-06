@@ -1,9 +1,9 @@
-from blacksheep import not_found
+from blacksheep import not_found, Request, WebSocket
 from functools import wraps
 from kikiutils.aes import AesCrypt
 
 from ..classes.transmission import DataTransmission
-from ..utils import data_transmission_exec
+from ..utils import data_transmission_exec, get_func_annotation_index
 from ..utils.blacksheep import get_file, get_rq, get_ws
 
 
@@ -13,12 +13,11 @@ def data_transmission_api(
     kwarg_name: str = 'data'
 ):
     def decorator(view_func):
-        @wraps(view_func)
-        async def wrapped_view(*args, **kwargs):
-            if (rq := get_rq(args)) is None:
-                return not_found()
+        rq_index = get_func_annotation_index(view_func, Request, True)
 
-            if (hash_file := await get_file(rq, 'hash_file')) is None:
+        @wraps(view_func)
+        async def wrapped_view(*args):
+            if (hash_file := await get_file(args[rq_index], 'hash_file')) is None:
                 return not_found()
 
             result = await data_transmission_exec(
@@ -29,7 +28,7 @@ def data_transmission_api(
                 kwarg_name,
                 view_func,
                 args,
-                kwargs,
+                {},
                 True
             )
 
@@ -40,16 +39,17 @@ def data_transmission_api(
 
 def service_websocket(aes: AesCrypt):
     def decorator(view_func):
+        ws_index = get_func_annotation_index(view_func, WebSocket, True)
+
         @wraps(view_func)
         async def wrapped_view(*args):
-            if ws := get_ws(args):
-                if extra_info := ws.headers.get(b'extra-info'):
-                    try:
-                        data = aes.decrypt(extra_info[0])
-                    except:
-                        return
+            if extra_info := args[ws_index].headers.get(b'extra-info'):
+                try:
+                    data = aes.decrypt(extra_info[0])
+                except:
+                    return
 
-                    return await view_func(*args[:-1], data)
+                return await view_func(*args[:-1], data)
 
         return wrapped_view
     return decorator
