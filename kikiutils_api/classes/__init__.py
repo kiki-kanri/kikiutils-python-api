@@ -2,14 +2,52 @@ from abc import abstractmethod
 from asyncio import create_task, Future
 from functools import wraps
 from kikiutils.aes import AesCrypt
-from typing import Callable, Coroutine, Optional
+from kikiutils.time import now_time_utc
+from typing import Callable, Coroutine, Optional, Type
 from uuid import uuid1
 
 
+class BaseServiceWebsocketConnection:
+    code: str = ''
+
+    def __init__(
+        self,
+        aes: AesCrypt,
+        extra_headers: dict,
+        name: str,
+        request,
+        websocket
+    ):
+        self.aes = aes
+        self.extra_headers = extra_headers
+        self.ip = self._get_ip(request)
+        self.name = name
+        self.request = request
+        self.time: int = now_time_utc()
+        self.ws = websocket
+
+    def _get_ip(self, rq):
+        return ''
+
+    @abstractmethod
+    async def emit(self, event: str, *args, **kwargs):
+        await self.send(self.aes.encrypt([event, args, kwargs]))
+
+    @abstractmethod
+    async def recv_data(self) -> list:
+        return []
+
 class BaseServiceWebsockets:
+    _connection_class: Type[BaseServiceWebsocketConnection]
+    need_accept = False
+
     def __init__(self, aes: AesCrypt, service_name: str):
         self.aes = aes
-        self.connections = {}
+        self.connections: dict[
+            str,
+            Type[BaseServiceWebsocketConnection]
+        ] = {}
+
         self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
         self.service_name = service_name
         self.waiting_events: dict[str, dict[str, Future]] = {}
@@ -44,6 +82,39 @@ class BaseServiceWebsockets:
                     self.waiting_events[event].pop(uuid, None)
 
     @abstractmethod
+    async def accept_and_listen(
+        self,
+        name: str,
+        request,
+        websocket,
+        extra_headers: dict = {}
+    ):
+        if self.need_accept:
+            await websocket.accept()
+
+        try:
+            connection = self._connection_class(
+                self.aes,
+                extra_headers,
+                name,
+                request,
+                websocket
+            )
+
+            data = await connection.recv_data()
+
+            if data[0] != 'init' or 'code' not in data[2]:
+                raise ValueError('')
+
+            connection.code = data[2]['code']
+            self._add_connection(name, connection)
+            await self._listen(connection)
+        except:
+            pass
+
+        self._del_connection(name)
+
+    @abstractmethod
     async def emit_and_wait_event(
         self,
         name: str,
@@ -64,6 +135,13 @@ class BaseServiceWebsockets:
         return await self.waiting_events[wait_event][uuid]
 
     @abstractmethod
+    async def emit_to_all(self, event: str, *args, **kwargs):
+        data = self.aes.encrypt([event, args, kwargs])
+
+        for connection in self.connections.values():
+            create_task(connection.send(data))
+
+    @abstractmethod
     async def emit_to_name(
         self,
         name: str,
@@ -71,7 +149,9 @@ class BaseServiceWebsockets:
         *args,
         **kwargs
     ):
-        pass
+        if connection := self.connections.get(name):
+            data = self.aes.encrypt([event, args, kwargs])
+            await connection.send(data)
 
     @abstractmethod
     def get_connection(self, name):
