@@ -9,7 +9,7 @@ class ServiceWebsocketConnection(BaseServiceWebsocketConnection):
     rq: Request
     ws: WebSocketConnection
 
-    def _get_ip(rq: Request):
+    def _get_ip(self, rq: Request):
         return rq.remote_addr
 
     async def send(self, data: Union[bytes, str]):
