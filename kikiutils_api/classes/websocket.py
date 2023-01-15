@@ -32,6 +32,7 @@ class WebsocketClient:
             'uri': url
         }
 
+        self.disconnecting = False
         self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
         self.name = name
         self.waiting_events: dict[str, dict[str, Future]] = {}
@@ -65,15 +66,20 @@ class WebsocketClient:
                     self.waiting_events[event].pop(uuid, None)
 
     async def connect(self):
+        if self.disconnecting:
+            return
+
         self.ws = await Connect(**self.connect_kwargs)
         await self.emit('init', code=self.code)
         self._check_task = self._create_task(self._check())
         self._listen_task = self._create_task(self._listen())
 
     async def disconnect(self):
+        self.disconnecting = True
         self._check_task.cancel()
         self._listen_task.cancel()
         await self.ws.close()
+        self.disconnecting = False
 
     async def emit(self, event: str, *args, **kwargs):
         await self.ws.send(self.aes.encrypt([event, args, kwargs]))
@@ -110,7 +116,7 @@ class WebsocketClient:
     async def wait_connect_success(self):
         """Wait for connect success."""
 
-        while True:
+        while not self.disconnecting:
             try:
                 await self.connect()
                 break

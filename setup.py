@@ -9,8 +9,8 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=True,
-    version='1.4.3',
-    description='Utils functions with api data process',
+    version='1.4.4',
+    description='Utils functions with api data process.',
     author='kiki-kanri',
     author_email='a470666@gmail.com',
     keywords=['Utils'],
@@ -19,5 +19,5 @@ setup(
         'kiki-utils',
         'websockets'
     ],
-    python_requires=">=3.6"
+    python_requires=">=3.8"
 )
