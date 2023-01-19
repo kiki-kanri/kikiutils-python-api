@@ -24,6 +24,7 @@ class BaseServiceWebsocketConnection:
         self.name = name
         self.request = request
         self.time: int = now_time_utc()
+        self.uuid = uuid1()
         self.ws = websocket
 
     def _get_ip(self, rq):
@@ -36,6 +37,7 @@ class BaseServiceWebsocketConnection:
     @abstractmethod
     async def recv_data(self) -> list:
         return []
+
 
 class BaseServiceWebsockets:
     _connection_class: Type[BaseServiceWebsocketConnection]
@@ -53,7 +55,7 @@ class BaseServiceWebsockets:
         self.waiting_events: dict[str, dict[str, Future]] = {}
 
     @abstractmethod
-    def _add_connection(self, name: str, connection):
+    def _add_connection(self, name: str, connection: Type[BaseServiceWebsocketConnection]):
         self.connections[name] = connection
 
     @abstractmethod
@@ -61,7 +63,7 @@ class BaseServiceWebsockets:
         self.connections.pop(name, None)
 
     @abstractmethod
-    async def _listen(self, connection):
+    async def _listen(self, connection: Type[BaseServiceWebsocketConnection]):
         while True:
             event, args, kwargs = await connection.recv_data()
 
@@ -110,9 +112,11 @@ class BaseServiceWebsockets:
             self._add_connection(name, connection)
             await self._listen(connection)
         except:
-            pass
+            connection = None
 
-        self._del_connection(name)
+        if connection and name in self.connections:
+            if connection.uuid == self.connections[name].uuid:
+                self._del_connection(name)
 
     @abstractmethod
     async def emit_and_wait_event(
