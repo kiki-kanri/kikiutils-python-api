@@ -69,11 +69,7 @@ class BaseServiceWebsockets:
 
             if event in self.event_handlers:
                 create_task(
-                    self.event_handlers[event](
-                        connection,
-                        *args,
-                        **kwargs
-                    )
+                    self.event_handlers[event](connection, *args, **kwargs)
                 )
 
             if event in self.waiting_events:
@@ -94,6 +90,8 @@ class BaseServiceWebsockets:
         if self.need_accept:
             await websocket.accept()
 
+        connection = None
+
         try:
             connection = self._connection_class(
                 self.aes,
@@ -112,11 +110,10 @@ class BaseServiceWebsockets:
             self._add_connection(name, connection)
             await self._listen(connection)
         except:
-            connection = None
+            pass
 
-        if connection and name in self.connections:
-            if connection.uuid == self.connections[name].uuid:
-                self._del_connection(name)
+        if connection and name in self.connections and connection.uuid == self.connections[name].uuid:
+            self._del_connection(name)
 
     @abstractmethod
     async def emit_and_wait_event(
