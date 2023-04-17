@@ -9,6 +9,7 @@ from websockets.legacy.client import Connect
 
 class WebsocketClient:
     _check_task: Task
+    _emit_raise_exception: bool
     _listen_task: Task
     code: str
     loop: AbstractEventLoop = None
@@ -19,7 +20,8 @@ class WebsocketClient:
         name: str,
         url: str,
         check_interval: int = 3,
-        headers: dict = {}
+        headers: dict = {},
+        emit_raise_exception: bool = False
     ):
         self.aes = aes
         self.check_interval = check_interval
@@ -33,6 +35,7 @@ class WebsocketClient:
         }
 
         self.disconnecting = False
+        self._emit_raise_exception = emit_raise_exception
         self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
         self.name = name
         self.waiting_events: dict[str, dict[str, Future]] = {}
@@ -82,15 +85,17 @@ class WebsocketClient:
         self.disconnecting = False
 
     async def emit(self, event: str, *args, **kwargs):
-        await self.ws.send(self.aes.encrypt([event, args, kwargs]))
+        if self._emit_raise_exception:
+            await self.ws.send(self.aes.encrypt([event, args, kwargs]))
+        else:
+            try:
+                await self.ws.send(self.aes.encrypt([event, args, kwargs]))
+            except:
+                return False
 
-    async def emit_and_wait_event(
-        self,
-        event: str,
-        wait_event: str,
-        *args,
-        **kwargs
-    ):
+        return True
+
+    async def emit_and_wait_event(self, event: str, wait_event: str, *args, **kwargs):
         uuid = uuid1().hex
         kwargs['__wait_event_uuid'] = uuid
 
@@ -106,11 +111,8 @@ class WebsocketClient:
         """Register event handler."""
 
         def decorator(view_func):
-            @wraps(view_func)
-            async def wrapped_view(*args, **kwargs):
-                await view_func(*args, **kwargs)
-            self.event_handlers[event] = wrapped_view
-            return wrapped_view
+            self.event_handlers[event] = view_func
+            return view_func
         return decorator
 
     async def wait_connect_success(self):

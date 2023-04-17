@@ -7,11 +7,7 @@ from ..utils import data_transmission_exec, get_func_annotation_index
 from ..utils.blacksheep import get_file, get_rq, get_ws
 
 
-def data_transmission_api(
-    *secret_classes: DataTransmission,
-    parse_json: bool = True,
-    kwarg_name: str = 'data'
-):
+def data_transmission_api(*secret_classes: DataTransmission, parse_json: bool = True, kwarg_name: str = 'data'):
     def decorator(view_func):
         rq_index = get_func_annotation_index(view_func, Request)
 
