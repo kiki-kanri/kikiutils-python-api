@@ -18,9 +18,7 @@ async def data_transmission_exec(
     is_blacksheep: bool = False
 ):
     for secret_class in secret_classes:
-        data: dict = secret_class.process_hash_data(
-            hash_data
-        )
+        data: dict = secret_class.process_hash_data(hash_data)
 
         if data is not None:
             break
@@ -57,7 +55,9 @@ def get_func_annotation_index(func: Callable, annotation_type):
         if v.annotation is annotation_type:
             return i
 
-    raise ValueError(f'Function {func} need set type {annotation_type} parameter!')
+    raise ValueError(
+        f'Function {func} need set type {annotation_type} parameter!'
+    )
 
 
 def parse_dict_value_json(data: dict):

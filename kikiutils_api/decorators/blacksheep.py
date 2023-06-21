@@ -4,7 +4,7 @@ from kikiutils.aes import AesCrypt
 
 from ..classes.transmission import DataTransmission
 from ..utils import data_transmission_exec, get_func_annotation_index
-from ..utils.blacksheep import get_file, get_rq, get_ws
+from ..utils.blacksheep import get_file
 
 
 def data_transmission_api(*secret_classes: DataTransmission, parse_json: bool = True, kwarg_name: str = 'data'):

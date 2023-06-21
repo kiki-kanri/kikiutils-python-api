@@ -5,9 +5,9 @@ from asyncio import sleep
 from kikiutils.aes import AesCrypt
 from kikiutils.check import isdict
 from kikiutils.decorators import try_and_get_data
-from kikiutils.string import random_str, s2b
+from kikiutils.string import s2b
 from kikiutils.uuid import get_uuid
-from random import randint, shuffle
+from random import shuffle
 from typing import Optional
 
 
@@ -17,12 +17,6 @@ class DataTransmission:
 
     @classmethod
     def hash_data(cls, data: dict):
-        for _ in range(1, randint(randint(2, 5), randint(6, 16))):
-            data[random_str(randint(8, 16), randint(17, 128))] = random_str(
-                randint(8, 32),
-                randint(33, 256)
-            )
-
         data_list = list(data.items())
         shuffle(data_list)
         hash_data = cls.aes.encrypt(data_list)

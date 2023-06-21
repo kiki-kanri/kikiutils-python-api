@@ -10,14 +10,7 @@ from uuid import uuid1
 class BaseServiceWebsocketConnection:
     code: str = ''
 
-    def __init__(
-        self,
-        aes: AesCrypt,
-        extra_headers: dict,
-        name: str,
-        request,
-        websocket
-    ):
+    def __init__(self, aes: AesCrypt, extra_headers: dict, name: str, request, websocket):
         self.aes = aes
         self.extra_headers = extra_headers
         self.ip = self._get_ip(request)
@@ -45,11 +38,7 @@ class BaseServiceWebsockets:
 
     def __init__(self, aes: AesCrypt, service_name: str):
         self.aes = aes
-        self.connections: dict[
-            str,
-            Type[BaseServiceWebsocketConnection]
-        ] = {}
-
+        self.connections: dict[str, Type[BaseServiceWebsocketConnection]] = {}
         self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
         self.service_name = service_name
         self.waiting_events: dict[str, dict[str, Future]] = {}
@@ -80,13 +69,7 @@ class BaseServiceWebsockets:
                     self.waiting_events[event].pop(uuid, None)
 
     @abstractmethod
-    async def accept_and_listen(
-        self,
-        name: str,
-        request,
-        websocket,
-        extra_headers: dict = {}
-    ):
+    async def accept_and_listen(self, name: str, request, websocket, extra_headers: dict = {}):
         if self.need_accept:
             await websocket.accept()
 
@@ -116,14 +99,7 @@ class BaseServiceWebsockets:
             self._del_connection(name)
 
     @abstractmethod
-    async def emit_and_wait_event(
-        self,
-        name: str,
-        event: str,
-        wait_event: str,
-        *args,
-        **kwargs
-    ):
+    async def emit_and_wait_event(self, name: str, event: str, wait_event: str, *args, **kwargs):
         uuid = uuid1().hex
         kwargs['__wait_event_uuid'] = uuid
 
@@ -143,13 +119,7 @@ class BaseServiceWebsockets:
             create_task(connection.send(data))
 
     @abstractmethod
-    async def emit_to_name(
-        self,
-        name: str,
-        event: str,
-        *args,
-        **kwargs
-    ):
+    async def emit_to_name(self, name: str, event: str, *args, **kwargs):
         if connection := self.connections.get(name):
             data = self.aes.encrypt([event, args, kwargs])
             await connection.send(data)
