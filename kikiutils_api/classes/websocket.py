@@ -1,5 +1,6 @@
 from asyncio import AbstractEventLoop, Future, get_event_loop, sleep, Task
 from kikiutils.aes import AesCrypt
+from kikiutils.log import logger
 from kikiutils.string import random_str
 from typing import Callable, Coroutine, Optional
 from uuid import uuid1
@@ -75,6 +76,7 @@ class WebsocketClient:
         await self.emit('init', code=self.code)
         self._check_task = self._create_task(self._check())
         self._listen_task = self._create_task(self._listen())
+        logger.success('Websocket success connected.')
 
     async def disconnect(self):
         self.disconnecting = True
