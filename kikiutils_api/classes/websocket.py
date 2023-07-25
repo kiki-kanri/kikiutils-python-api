@@ -1,9 +1,9 @@
-from asyncio import AbstractEventLoop, Future, get_event_loop, sleep, Task
+from asyncio import AbstractEventLoop, CancelledError, get_event_loop, sleep, Task
 from kikiutils.aes import AesCrypt
 from kikiutils.log import logger
 from kikiutils.string import random_str
-from typing import Callable, Coroutine, Optional
-from uuid import uuid1
+from kikiutils.typehint import P, T
+from typing import Any, Callable, Coroutine
 from websockets.legacy.client import Connect
 
 
@@ -23,7 +23,7 @@ class WebsocketClient:
         headers: dict = {},
         emit_raise_exception: bool = False
     ):
-        self.aes = aes
+        self._aes = aes
         self.check_interval = check_interval
         self.code = random_str()
         self.connect_kwargs = {
@@ -38,35 +38,35 @@ class WebsocketClient:
         self._emit_raise_exception = emit_raise_exception
         self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
         self.name = name
-        self.waiting_events: dict[str, dict[str, Future]] = {}
 
     async def _check(self):
-        try:
-            await sleep(self.check_interval)
-            await self.ws.ping()
-            self._check_task = self._create_task(self._check())
-        except:
-            self._listen_task.cancel()
-            await self.wait_connect_success()
+        while True:
+            try:
+                await sleep(self.check_interval)
+                await self.ws.ping()
+            except CancelledError:
+                break
+            except:
+                self._listen_task.cancel()
 
-    def _create_task(self, coro: Coroutine):
+                try:
+                    await self.ws.close()
+                except:
+                    pass
+
+                return self._create_task(self.wait_connect_success())
+
+    def _create_task(self, coro: Coroutine[Any, Any, T]):
         if self.loop is None:
             self.loop = get_event_loop()
         return self.loop.create_task(coro)
 
     async def _listen(self):
         while True:
-            event, args, kwargs = self.aes.decrypt(await self.ws.recv())
+            event, args, kwargs = self._aes.decrypt(await self.ws.recv())
 
-            if event in self.event_handlers:
-                self._create_task(self.event_handlers[event](*args, **kwargs))
-
-            if event in self.waiting_events:
-                uuid: Optional[str] = kwargs.get('__wait_event_uuid')
-
-                if uuid and uuid in self.waiting_events[event]:
-                    self.waiting_events[event][uuid].set_result((args, kwargs))
-                    self.waiting_events[event].pop(uuid, None)
+            if handler := self.event_handlers.get(event):
+                self._create_task(handler(*args, **kwargs))
 
     async def connect(self):
         if self.disconnecting:
@@ -87,31 +87,19 @@ class WebsocketClient:
 
     async def emit(self, event: str, *args, **kwargs):
         if self._emit_raise_exception:
-            await self.ws.send(self.aes.encrypt([event, args, kwargs]))
+            await self.ws.send(self._aes.encrypt([event, args, kwargs]))
         else:
             try:
-                await self.ws.send(self.aes.encrypt([event, args, kwargs]))
+                await self.ws.send(self._aes.encrypt([event, args, kwargs]))
             except:
                 return False
 
         return True
 
-    async def emit_and_wait_event(self, event: str, wait_event: str, *args, **kwargs):
-        uuid = uuid1().hex
-        kwargs['__wait_event_uuid'] = uuid
-
-        if wait_event in self.waiting_events:
-            self.waiting_events[wait_event][uuid] = Future()
-        else:
-            self.waiting_events[wait_event] = {uuid: Future()}
-
-        await self.emit(event, *args, **kwargs)
-        return await self.waiting_events[wait_event][uuid]
-
     def on(self, event: str):
         """Register event handler."""
 
-        def decorator(view_func):
+        def decorator(view_func: Callable[P, Coroutine[Any, Any, T]]):
             self.event_handlers[event] = view_func
             return view_func
         return decorator
@@ -126,4 +114,5 @@ class WebsocketClient:
             except KeyboardInterrupt:
                 exit()
             except:
+                logger.error('Websocket connect error!')
                 await sleep(1)
