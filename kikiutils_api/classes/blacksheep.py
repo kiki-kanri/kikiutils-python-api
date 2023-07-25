@@ -18,7 +18,7 @@ class ServiceWebsocketConnection(BaseServiceWebsocketConnection):
         await self.ws.send_text(data)
 
     async def recv_data(self) -> list:
-        return self.aes.decrypt(await self.ws.receive_text())
+        return self._aes.decrypt(await self.ws.receive_text())
 
 
 class ServiceWebsockets(BaseServiceWebsockets):
