@@ -1,18 +1,16 @@
-from asyncio import AbstractEventLoop, CancelledError, get_event_loop, sleep, Task
+from asyncio import AbstractEventLoop, CancelledError, get_running_loop, sleep, Task
 from kikiutils.aes import AesCrypt
 from kikiutils.log import logger
 from kikiutils.string import random_str
 from kikiutils.typehint import P, T
-from typing import Any, Callable, Coroutine
+from typing import Any, Callable, Coroutine, Optional
 from websockets.legacy.client import Connect
 
 
 class WebsocketClient:
     _check_task: Task
-    _emit_raise_exception: bool
     _listen_task: Task
     code: str
-    loop: AbstractEventLoop = None
 
     def __init__(
         self,
@@ -21,9 +19,12 @@ class WebsocketClient:
         url: str,
         check_interval: int = 3,
         headers: dict = {},
-        emit_raise_exception: bool = False
+        emit_raise_exception: bool = False,
+        loop: Optional[AbstractEventLoop] = None
     ):
         self._aes = aes
+        self._emit_raise_exception = emit_raise_exception
+        self._loop = loop or get_running_loop()
         self.check_interval = check_interval
         self.code = random_str()
         self.connect_kwargs = {
@@ -35,7 +36,6 @@ class WebsocketClient:
         }
 
         self.disconnecting = False
-        self._emit_raise_exception = emit_raise_exception
         self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
         self.name = name
 
@@ -54,19 +54,14 @@ class WebsocketClient:
                 except:
                     pass
 
-                return self._create_task(self.wait_connect_success())
-
-    def _create_task(self, coro: Coroutine[Any, Any, T]):
-        if self.loop is None:
-            self.loop = get_event_loop()
-        return self.loop.create_task(coro)
+                return self._loop.create_task(self.wait_connect_success())
 
     async def _listen(self):
         while True:
             event, args, kwargs = self._aes.decrypt(await self.ws.recv())
 
             if handler := self.event_handlers.get(event):
-                self._create_task(handler(*args, **kwargs))
+                self._loop.create_task(handler(*args, **kwargs))
 
     async def connect(self):
         if self.disconnecting:
@@ -74,8 +69,8 @@ class WebsocketClient:
 
         self.ws = await Connect(**self.connect_kwargs)
         await self.emit('init', code=self.code)
-        self._check_task = self._create_task(self._check())
-        self._listen_task = self._create_task(self._listen())
+        self._check_task = self._loop.create_task(self._check())
+        self._listen_task = self._loop.create_task(self._listen())
         logger.success('Websocket success connected.')
 
     async def disconnect(self):

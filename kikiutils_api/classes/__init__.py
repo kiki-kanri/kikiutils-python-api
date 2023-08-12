@@ -1,9 +1,9 @@
 from abc import abstractmethod
-from asyncio import create_task
+from asyncio import AbstractEventLoop, get_running_loop
 from kikiutils.aes import AesCrypt
 from kikiutils.time import now_time_utc
 from kikiutils.typehint import P, T
-from typing import Any, Callable, Coroutine, Type
+from typing import Any, Callable, Coroutine, Optional, Type
 from uuid import uuid1
 
 
@@ -37,8 +37,9 @@ class BaseServiceWebsockets:
     _connection_class: Type[BaseServiceWebsocketConnection]
     need_accept = False
 
-    def __init__(self, aes: AesCrypt, service_name: str):
+    def __init__(self, aes: AesCrypt, service_name: str, loop: Optional[AbstractEventLoop] = None):
         self._aes = aes
+        self._loop = loop or get_running_loop()
         self.connections: dict[str, Type[BaseServiceWebsocketConnection]] = {}
         self.event_handlers: dict[str, Callable[..., Coroutine]] = {}
         self.service_name = service_name
@@ -57,7 +58,7 @@ class BaseServiceWebsockets:
             event, args, kwargs = await connection.recv_data()
 
             if handler := self.event_handlers.get(event):
-                create_task(handler(connection, *args, **kwargs))
+                self._loop.create_task(handler(connection, *args, **kwargs))
 
     @abstractmethod
     async def accept_and_listen(self, name: str, request, websocket, extra_headers: dict = {}):
@@ -94,13 +95,17 @@ class BaseServiceWebsockets:
         data = self._aes.encrypt([event, args, kwargs])
 
         for connection in self.connections.values():
-            create_task(connection.send(data))
+            self._loop.create_task(connection.send(data))
+
+    @abstractmethod
+    async def emit_to_connection(self, connection: Type[BaseServiceWebsocketConnection], event: str, *args, **kwargs):
+        data = self._aes.encrypt([event, args, kwargs])
+        await connection.send(data)
 
     @abstractmethod
     async def emit_to_name(self, name: str, event: str, *args, **kwargs):
         if connection := self.connections.get(name):
-            data = self._aes.encrypt([event, args, kwargs])
-            await connection.send(data)
+            await self.emit_to_connection(connection, event, *args, **kwargs)
 
     @abstractmethod
     def get_connection(self, name):
