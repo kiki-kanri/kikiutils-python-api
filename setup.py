@@ -9,7 +9,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=True,
-    version='1.5.3',
+    version='1.6.0',
     description='Utils functions with api data process.',
     author='kiki-kanri',
     author_email='a470666@gmail.com',
