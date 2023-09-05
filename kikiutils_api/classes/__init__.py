@@ -12,6 +12,7 @@ class BaseServiceWebsocketConnection:
 
     def __init__(self, aes: AesCrypt, extra_headers: dict, name: str, request, websocket):
         self._aes = aes
+        self.alive = False
         self.extra_headers = extra_headers
         self.ip = self._get_ip(request)
         self.name = name
@@ -61,7 +62,14 @@ class BaseServiceWebsockets:
                 self._loop.create_task(handler(connection, *args, **kwargs))
 
     @abstractmethod
-    async def accept_and_listen(self, name: str, request, websocket, extra_headers: dict = {}):
+    async def accept_and_listen(
+        self,
+        name: str,
+        request,
+        websocket,
+        extra_headers: dict = {},
+        on_accept: Optional[Callable[[BaseServiceWebsocketConnection], Coroutine[Any, Any, None]]] = None
+    ):
         if self.need_accept:
             await websocket.accept()
 
@@ -81,14 +89,22 @@ class BaseServiceWebsockets:
             if data[0] != 'init' or 'code' not in data[2]:
                 raise ValueError('')
 
+            connection.alive = True
             connection.code = data[2]['code']
             self._add_connection(name, connection)
+
+            if on_accept:
+                self._loop.create_task(on_accept(connection))
+
             await self._listen(connection)
         except:
             pass
 
-        if connection and name in self.connections and connection.uuid == self.connections[name].uuid:
-            self._del_connection(name)
+        if connection:
+            connection.alive = False
+
+            if name in self.connections and connection.uuid == self.connections[name].uuid:
+                self._del_connection(name)
 
     @abstractmethod
     async def emit_to_all(self, event: str, *args, **kwargs):
